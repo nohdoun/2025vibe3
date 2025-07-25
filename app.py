@@ -7,43 +7,46 @@ from streamlit_folium import st_folium
 if "bookmarks" not in st.session_state:
     st.session_state.bookmarks = []
 
-st.title("📍 주소 기반 나만의 북마크 지도")
+st.title("📍 주소로 북마크 지도 만들기")
 
 # 주소 입력 폼
-with st.form("address_form"):
-    address = st.text_input("주소를 입력하세요 (예: 광주광역시 북구 금호로40번길 40)")
-    note = st.text_input("장소 설명 (선택)", "")
+with st.form("bookmark_form"):
+    address = st.text_input("🗺️ 장소 주소 입력 (예: 광주광역시 북구 금호로40번길 40)")
+    note = st.text_input("📝 장소 설명 (선택)", "")
     submitted = st.form_submit_button("📌 북마크 추가")
 
     if submitted and address:
-        geolocator = Nominatim(user_agent="bookmark_map_app")
-        location = geolocator.geocode(address)
+        try:
+            geolocator = Nominatim(user_agent="my_map_app")
+            location = geolocator.geocode(address)
 
-        if location:
-            st.session_state.bookmarks.append({
-                "name": address,
-                "lat": location.latitude,
-                "lon": location.longitude,
-                "note": note
-            })
-            st.success(f"'{address}' 북마크가 추가되었습니다!")
-        else:
-            st.error("❌ 주소를 찾을 수 없습니다. 다시 확인해주세요.")
+            if location:
+                st.session_state.bookmarks.append({
+                    "name": address,
+                    "lat": location.latitude,
+                    "lon": location.longitude,
+                    "note": note
+                })
+                st.success(f"✅ '{address}' 북마크가 추가되었습니다!")
+            else:
+                st.error("❌ 주소를 찾을 수 없습니다. 다시 입력해 주세요.")
+        except Exception as e:
+            st.error(f"지오코딩 중 오류 발생: {e}")
 
-# 지도 중심 좌표 (초기값: 광주)
-map_center = [35.1667, 126.9167]
+# 지도 생성
+map_center = [35.1667, 126.9167]  # 광주 중심
 m = folium.Map(location=map_center, zoom_start=13)
 
-# 마커 추가
-for bm in st.session_state.bookmarks:
+# 북마크 추가
+for b in st.session_state.bookmarks:
     folium.Marker(
-        location=[bm["lat"], bm["lon"]],
-        popup=f"<b>{bm['name']}</b><br>{bm['note']}",
-        tooltip=bm["name"],
-        icon=folium.Icon(color="blue", icon="map-marker")
+        location=[b["lat"], b["lon"]],
+        popup=f"<b>{b['name']}</b><br>{b['note']}",
+        tooltip=b["name"],
+        icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
-# 지도 출력
+# 지도 렌더링
 st_folium(m, width=700, height=500)
 
 # 리셋 버튼
