@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -24,7 +25,7 @@ region_coords = {
 }
 
 st.set_page_config(layout="wide")
-st.title("🧬 바이오 업종별 지역 분포 시각화 (0 포함, 전체 업종 표시)")
+st.title("🧬 바이오 업종별 지역 분포 시각화")
 
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
 if uploaded_file is not None:
