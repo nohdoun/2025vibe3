@@ -14,24 +14,24 @@ region_coords = {
 
 # 업종별 색상 고정
 color_map = {
-    '바이오 의약': '#1f77b4',
-    '바이오 화학·에너지': '#2ca02c',
-    '바이오 식품': '#ff7f0e',
-    '바이오 환경': '#d62728',
-    '바이오 의료기기': '#9467bd',
-    '바이오 장비 및 기기': '#e377c2',
-    '바이오 자원': '#17becf',
-    '바이오 서비스': '#bcbd22'
+    '바이오 의약': '#1f77b4',         # 파랑
+    '바이오 화학·에너지': '#2ca02c',   # 초록
+    '바이오 식품': '#ff7f0e',         # 주황
+    '바이오 환경': '#d62728',         # 빨강
+    '바이오 의료기기': '#9467bd',     # 보라
+    '바이오 장비 및 기기': '#e377c2', # 분홍
+    '바이오 자원': '#17becf',         # 청록
+    '바이오 서비스': '#bcbd22'        # 올리브
 }
 
 st.set_page_config(layout="wide")
 st.title("🧬 바이오 업종별 지역 분포 시각화")
 
-# ✅ CSV 직접 로딩
+# ✅ CSV 직접 로딩 (파일명만 바꿔서 사용 가능)
 csv_path = "지역_분포바이오사업장_기준_20250725131838.csv"
 df_raw = pd.read_csv(csv_path, encoding='cp949', header=None)
 
-# 컬럼 설정
+# 컬럼명 설정 및 정제
 df_raw.columns = df_raw.iloc[1]
 df = df_raw.iloc[3:].reset_index(drop=True)
 df = df.rename(columns={df.columns[0]: '업종'})
@@ -49,7 +49,7 @@ all_combinations = pd.MultiIndex.from_product(
     names=['업종', '지역']
 ).to_frame(index=False)
 
-# Long 포맷 변환
+# Long 포맷으로 변환
 df_long = df.melt(
     id_vars=['업종'],
     value_vars=region_columns,
@@ -57,10 +57,11 @@ df_long = df.melt(
     value_name='사업장 수'
 )
 
+# 누락된 조합 0으로 채우기
 df_full = all_combinations.merge(df_long, on=['업종', '지역'], how='left')
 df_full['사업장 수'] = df_full['사업장 수'].fillna(0)
 
-# 위도/경도
+# 위경도 추가
 df_full['위도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
 df_full['경도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
 df_full = df_full.dropna(subset=['위도', '경도'])
@@ -72,22 +73,9 @@ selected_regions = st.multiselect(
     options=available_regions,
     default=available_regions
 )
+filtered = df_full[df_full['지역'].isin(selected_regions)]
 
-# ✅ 업종 선택 필터
-available_industries = sorted(df_full['업종'].unique())
-selected_industries = st.multiselect(
-    "확인할 업종을 선택하세요:",
-    options=available_industries,
-    default=available_industries
-)
-
-# ✅ 필터 적용
-filtered = df_full[
-    df_full['지역'].isin(selected_regions) &
-    df_full['업종'].isin(selected_industries)
-]
-
-# ✅ 지도 시각화 (0 제외)
+# ✅ 지도 시각화 (사업장 수 > 0만)
 st.subheader("🗺️ 업종별 바이오 사업장 분포 (지도)")
 filtered_map = filtered[filtered['사업장 수'] > 0]
 fig_map = px.scatter_mapbox(
@@ -105,7 +93,7 @@ fig_map = px.scatter_mapbox(
 )
 st.plotly_chart(fig_map, use_container_width=True)
 
-# ✅ 막대 그래프
+# ✅ 막대 그래프 시각화
 st.subheader("📊 지역별 업종별 바이오 사업장 수 (막대그래프)")
 fig_bar = px.bar(
     filtered,
