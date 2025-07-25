@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 지역별 위도/경도
+# 지역 위도/경도
 region_coords = {
     "서울": [37.5665, 126.9780],
     "부산": [35.1796, 129.0756],
@@ -32,16 +32,14 @@ if uploaded_file is not None:
     df.columns = df.iloc[0]
     df = df[1:].reset_index(drop=True)
 
-    # '주력업종별' 데이터만 사용
+    # 주력업종별만 사용
     df_bio = df[df['현황별(1)'] == '주력업종별'].copy()
     df_bio = df_bio.rename(columns={df_bio.columns[1]: '업종'})
     region_columns = df_bio.columns[2:]
 
-    # 숫자 변환
     for col in region_columns:
         df_bio[col] = pd.to_numeric(df_bio[col], errors='coerce')
 
-    # Long Format 변환
     df_long = df_bio.melt(
         id_vars=['업종'],
         value_vars=region_columns,
@@ -49,23 +47,20 @@ if uploaded_file is not None:
         value_name='사업장 수'
     ).dropna()
 
-    # 위도/경도 추가
     df_long['위도'] = df_long['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
     df_long['경도'] = df_long['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
     df_long = df_long.dropna(subset=['위도', '경도'])
 
-    # ✅ 사용자에게 지역 선택 옵션 제공
+    # ✅ 지역 선택
     available_regions = sorted(df_long['지역'].unique())
     selected_regions = st.multiselect(
         "확인할 지역을 선택하세요:",
         options=available_regions,
-        default=available_regions  # 기본값: 전체 선택
+        default=available_regions
     )
-
-    # 선택된 지역만 필터링
     filtered = df_long[df_long['지역'].isin(selected_regions)]
 
-    # ✅ 지도 시각화
+    # ✅ 지도
     st.subheader("🗺️ 선택 지역의 업종별 바이오 사업장 분포 (지도)")
     fig_map = px.scatter_mapbox(
         filtered,
@@ -81,16 +76,16 @@ if uploaded_file is not None:
     )
     st.plotly_chart(fig_map, use_container_width=True)
 
-    # ✅ 막대 그래프
-    st.subheader("📊 선택 지역의 업종별 바이오 사업장 수 (막대 그래프)")
+    # ✅ 막대 그래프: 업종별로 나열, 색상은 지역별
+    st.subheader("📊 업종별 바이오 사업장 수 (지역별 색상)")
     fig_bar = px.bar(
         filtered,
-        x='지역',
+        x='업종',
         y='사업장 수',
-        color='업종',
+        color='지역',
         text='사업장 수',
-        barmode='stack',  # 'group' 으로 변경 가능
-        title='지역별 업종별 바이오 사업장 수'
+        barmode='group',  # 업종별로 지역 비교 가능
+        title='업종별 지역별 바이오 사업장 수 비교'
     )
     fig_bar.update_traces(textposition='outside')
     fig_bar.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
