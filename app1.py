@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="서울시 인구 시각화", layout="wide")
-st.title("📊 서울시 연령별 인구 시각화 (2025년 6월 기준)")
+st.set_page_config(page_title="지역별 인구 시각화", layout="wide")
+st.title("📊 지역별 연령별 인구 시각화 (2025년 6월 기준)")
 
 # 파일 업로드
 col1, col2 = st.columns(2)
@@ -12,18 +12,19 @@ with col1:
 with col2:
     file_gender = st.file_uploader("② 연령별 남녀 인구 구분 CSV 업로드", type="csv", key="gender")
 
-# 둘 다 업로드된 경우에만 진행
 if file_total and file_gender:
     try:
-        # 데이터 불러오기
         df_total = pd.read_csv(file_total, encoding='cp949')
         df_gender = pd.read_csv(file_gender, encoding='cp949')
 
-        # 서울시 전체 행
-        row_total = df_total.iloc[0]
-        row_gender = df_gender.iloc[0]
+        # ▶ 지역 선택
+        regions = df_total['행정구역'].unique().tolist()
+        selected_region = st.selectbox("지역 선택", regions)
 
-        ### 1. 연령별 인구 총합 꺾은선 그래프 ###
+        row_total = df_total[df_total['행정구역'] == selected_region].iloc[0]
+        row_gender = df_gender[df_gender['행정구역'] == selected_region].iloc[0]
+
+        ### 1. 연령별 전체 인구 ###
         age_cols = [col for col in df_total.columns if '2025년06월_계_' in col and '총' not in col and '연령구간' not in col]
         ages = [col.replace('2025년06월_계_', '') for col in age_cols]
         pops = row_total[age_cols].astype(str).str.replace(',', '').replace('nan', '0').astype(int)
@@ -32,7 +33,7 @@ if file_total and file_gender:
         fig1.add_trace(go.Scatter(x=ages, y=pops, mode='lines+markers', name='전체 인구'))
 
         fig1.update_layout(
-            title='서울시 연령별 전체 인구 (2025년 6월)',
+            title=f'{selected_region} 연령별 전체 인구 (2025년 6월)',
             xaxis_title='연령',
             yaxis_title='인구 수',
             xaxis=dict(tickangle=-45),
@@ -52,7 +53,7 @@ if file_total and file_gender:
         fig2.add_trace(go.Bar(y=age_labels, x=female_pops, name='여성', orientation='h'))
 
         fig2.update_layout(
-            title='서울시 연령별 남녀 인구 피라미드 (2025년 6월)',
+            title=f'{selected_region} 연령별 남녀 인구 피라미드 (2025년 6월)',
             xaxis_title='인구 수',
             yaxis_title='연령',
             barmode='relative',
