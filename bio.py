@@ -57,3 +57,44 @@ if uploaded_file is not None:
     # 위도/경도 추가
     df_long['위도'] = df_long['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
     df_long['경도'] = df_long['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
+    df_long = df_long.dropna(subset=['위도', '경도'])
+
+    # ✅ 지역 선택 필터
+    available_regions = sorted(df_long['지역'].unique())
+    selected_regions = st.multiselect(
+        "확인할 지역을 선택하세요:",
+        options=available_regions,
+        default=available_regions
+    )
+    filtered = df_long[df_long['지역'].isin(selected_regions)]
+
+    # ✅ 지도 시각화
+    st.subheader("🗺️ 선택 지역의 업종별 바이오 사업장 분포 (지도)")
+    fig_map = px.scatter_mapbox(
+        filtered,
+        lat='위도',
+        lon='경도',
+        size='사업장 수',
+        color='업종',
+        hover_name='지역',
+        hover_data={'사업장 수': True},
+        size_max=40,
+        zoom=5.5,
+        mapbox_style='carto-positron',
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
+
+    # ✅ 막대 그래프 시각화
+    st.subheader("📊 지역별 업종별 바이오 사업장 수 (막대그래프)")
+    fig_bar = px.bar(
+        filtered,
+        x='지역',
+        y='사업장 수',
+        color='업종',
+        text='사업장 수',
+        barmode='stack',  # 'group'으로 바꿔도 OK
+        title='지역별 업종별 바이오 사업장 수'
+    )
+    fig_bar.update_traces(textposition='outside')
+    fig_bar.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig_bar, use_container_width=True)
