@@ -27,11 +27,11 @@ color_map = {
 st.set_page_config(layout="wide")
 st.title("🧬 바이오 업종별 지역 분포 시각화")
 
-# ✅ CSV 직접 로딩 (업로드 없이 경로 고정)
+# ✅ CSV 직접 로딩 (경로 고정)
 csv_path = "지역_분포바이오사업장_기준_20250725131838.csv"
 df_raw = pd.read_csv(csv_path, encoding='cp949', header=None)
 
-# 컬럼명 설정: 2행 (index 1), 데이터는 4행 (index 3)부터
+# 컬럼 정리
 df_raw.columns = df_raw.iloc[1]
 df = df_raw.iloc[3:].reset_index(drop=True)
 df = df.rename(columns={df.columns[0]: '업종'})
@@ -41,7 +41,7 @@ region_columns = df.columns[1:]
 for col in region_columns:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# 모든 조합 생성
+# 조합 생성 및 결합
 all_regions = region_columns.tolist()
 all_industries = df['업종'].unique().tolist()
 all_combinations = pd.MultiIndex.from_product(
@@ -49,7 +49,6 @@ all_combinations = pd.MultiIndex.from_product(
     names=['업종', '지역']
 ).to_frame(index=False)
 
-# Long 형태 변환
 df_long = df.melt(
     id_vars=['업종'],
     value_vars=region_columns,
@@ -57,16 +56,15 @@ df_long = df.melt(
     value_name='사업장 수'
 )
 
-# NaN 보완
 df_full = all_combinations.merge(df_long, on=['업종', '지역'], how='left')
 df_full['사업장 수'] = df_full['사업장 수'].fillna(0)
 
-# 위도/경도 추가
+# 위경도 추가
 df_full['위도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
 df_full['경도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
 df_full = df_full.dropna(subset=['위도', '경도'])
 
-# ✅ 지역 선택 필터
+# ✅ 지역 선택
 available_regions = sorted(df_full['지역'].unique())
 selected_regions = st.multiselect(
     "확인할 지역을 선택하세요:",
@@ -75,16 +73,15 @@ selected_regions = st.multiselect(
 )
 filtered = df_full[df_full['지역'].isin(selected_regions)]
 
-# ✅ 지도 시각화 (0 → 0.1로 표시)
+# ✅ 지도 시각화 (0 제거)
 st.subheader("🗺️ 선택 지역의 업종별 바이오 사업장 분포 (지도)")
-filtered_map = filtered.copy()
-filtered_map['표시용 크기'] = filtered_map['사업장 수'].apply(lambda x: x if x > 0 else 0.1)
+filtered_map = filtered[filtered['사업장 수'] > 0]  # 0은 지도에서 제외
 
 fig_map = px.scatter_mapbox(
     filtered_map,
     lat='위도',
     lon='경도',
-    size='표시용 크기',
+    size='사업장 수',
     color='업종',
     color_discrete_map=color_map,
     hover_name='지역',
@@ -95,7 +92,7 @@ fig_map = px.scatter_mapbox(
 )
 st.plotly_chart(fig_map, use_container_width=True)
 
-# ✅ 막대그래프 시각화
+# ✅ 막대그래프 시각화 (0 포함)
 st.subheader("📊 지역별 업종별 바이오 사업장 수 (막대그래프)")
 fig_bar = px.bar(
     filtered,
