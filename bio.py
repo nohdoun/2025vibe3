@@ -24,7 +24,7 @@ region_coords = {
 }
 
 st.set_page_config(layout="wide")
-st.title("🧬 바이오 업종별 지역 분포 시각화 (지역 선택 가능)")
+st.title("🧬 바이오 업종별 지역 분포 시각화")
 
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
 if uploaded_file is not None:
