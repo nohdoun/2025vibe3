@@ -12,8 +12,8 @@ region_coords = {
     "경남": [35.4606, 128.2132], "제주": [33.4996, 126.5312]
 }
 
-# 업종별 색상 고정 (필요 시 자동 생성 가능)
-color_map = {
+# 기본 색상 고정 (자동 확장 가능)
+base_color_map = {
     '바이오 의약': '#1f77b4',
     '바이오 화학·에너지': '#2ca02c',
     '바이오 식품': '#ff7f0e',
@@ -34,33 +34,36 @@ df_raw = pd.read_csv(csv_path, encoding='cp949', header=None)
 # 컬럼 설정
 df_raw.columns = df_raw.iloc[1]
 df = df_raw.iloc[3:].reset_index(drop=True)
+
+# 업종 컬럼 이름 통일 및 전처리
 df = df.rename(columns={df.columns[0]: '업종'})
+df['업종'] = df['업종'].astype(str).str.strip()
+df = df[~df['업종'].isin(['nan', '기타', '', 'NaN'])]
 
 # 숫자형 변환
 region_columns = df.columns[1:]
 for col in region_columns:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# 모든 업종-지역 조합 생성
+# 업종-지역 조합 생성
 all_regions = region_columns.tolist()
-all_industries = df['업종'].unique().tolist()
+all_industries = sorted(df['업종'].unique())
 all_combinations = pd.MultiIndex.from_product(
     [all_industries, all_regions],
     names=['업종', '지역']
 ).to_frame(index=False)
 
-# Long 포맷 변환
+# Long 포맷
 df_long = df.melt(
     id_vars=['업종'],
     value_vars=region_columns,
     var_name='지역',
     value_name='사업장 수'
 )
-
 df_full = all_combinations.merge(df_long, on=['업종', '지역'], how='left')
 df_full['사업장 수'] = df_full['사업장 수'].fillna(0)
 
-# 위도/경도 추가
+# 위경도 추가
 df_full['위도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
 df_full['경도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
 df_full = df_full.dropna(subset=['위도', '경도'])
@@ -74,11 +77,10 @@ selected_regions = st.multiselect(
 )
 
 # ✅ 업종 선택 필터
-available_industries = sorted(df_full['업종'].unique())
 selected_industries = st.multiselect(
     "✅ 확인할 바이오 업종을 선택하세요:",
-    options=available_industries,
-    default=available_industries
+    options=all_industries,
+    default=all_industries
 )
 
 # ✅ 필터 적용
@@ -86,6 +88,14 @@ filtered = df_full[
     (df_full['지역'].isin(selected_regions)) &
     (df_full['업종'].isin(selected_industries))
 ]
+
+# ✅ color_map 자동 확장
+from plotly.colors import qualitative
+palette = qualitative.Set2 + qualitative.Pastel + qualitative.Dark24
+color_map = base_color_map.copy()
+for i, 업종 in enumerate(all_industries):
+    if 업종 not in color_map:
+        color_map[업종] = palette[i % len(palette)]
 
 # ✅ 지도 시각화
 st.subheader("🗺️ 선택 지역의 업종별 바이오 사업장 분포 (지도)")
