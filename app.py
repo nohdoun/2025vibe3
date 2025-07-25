@@ -1,52 +1,72 @@
 import streamlit as st
-from geopy.geocoders import Nominatim
 import folium
+from geopy.geocoders import Nominatim
 from streamlit_folium import st_folium
 
 # 세션 상태 초기화
 if "bookmarks" not in st.session_state:
     st.session_state.bookmarks = []
 
-st.title("📍 주소로 북마크 지도 만들기")
+st.title("📍 나만의 북마크 지도")
+st.markdown("위치 입력 방법을 선택하고, 지도에 마커를 추가해보세요!")
 
-# 주소 입력 폼
-with st.form("bookmark_form"):
-    address = st.text_input("🗺️ 장소 주소 입력 (예: 광주광역시 북구 금호로40번길 40)")
-    note = st.text_input("📝 장소 설명 (선택)", "")
-    submitted = st.form_submit_button("📌 북마크 추가")
+# 입력 방식 선택
+input_method = st.radio("위치 입력 방식 선택", ["주소 입력", "위도/경도 직접 입력"], horizontal=True)
 
-    if submitted and address:
-        try:
-            geolocator = Nominatim(user_agent="my_map_app")
-            location = geolocator.geocode(address)
-
-            if location:
+with st.form("location_form"):
+    if input_method == "주소 입력":
+        address = st.text_input("주소를 입력하세요 (예: 광주광역시 북구 금호로40번길 40)")
+        note = st.text_input("장소 설명", "")
+        submitted = st.form_submit_button("📌 북마크 추가")
+        if submitted:
+            if address:
+                geolocator = Nominatim(user_agent="bookmark_map_app")
+                location = geolocator.geocode(address)
+                if location:
+                    st.session_state.bookmarks.append({
+                        "name": address,
+                        "lat": location.latitude,
+                        "lon": location.longitude,
+                        "note": note
+                    })
+                    st.success(f"✅ '{address}' 북마크가 추가되었습니다!")
+                else:
+                    st.error("❌ 주소를 찾을 수 없습니다.")
+            else:
+                st.warning("주소를 입력해주세요.")
+    
+    elif input_method == "위도/경도 직접 입력":
+        name = st.text_input("장소 이름")
+        lat = st.number_input("위도 (Latitude)", format="%.6f")
+        lon = st.number_input("경도 (Longitude)", format="%.6f")
+        note = st.text_input("장소 설명", "")
+        submitted = st.form_submit_button("📌 북마크 추가")
+        if submitted:
+            if name and lat and lon:
                 st.session_state.bookmarks.append({
-                    "name": address,
-                    "lat": location.latitude,
-                    "lon": location.longitude,
+                    "name": name,
+                    "lat": lat,
+                    "lon": lon,
                     "note": note
                 })
-                st.success(f"✅ '{address}' 북마크가 추가되었습니다!")
+                st.success(f"✅ '{name}' 북마크가 추가되었습니다!")
             else:
-                st.error("❌ 주소를 찾을 수 없습니다. 다시 입력해 주세요.")
-        except Exception as e:
-            st.error(f"지오코딩 중 오류 발생: {e}")
+                st.warning("장소 이름과 좌표를 모두 입력해주세요.")
 
-# 지도 생성
-map_center = [35.1667, 126.9167]  # 광주 중심
+# 지도 생성 (광주 중심)
+map_center = [35.1667, 126.9167]
 m = folium.Map(location=map_center, zoom_start=13)
 
-# 북마크 추가
-for b in st.session_state.bookmarks:
+# 북마크 마커 추가
+for bm in st.session_state.bookmarks:
     folium.Marker(
-        location=[b["lat"], b["lon"]],
-        popup=f"<b>{b['name']}</b><br>{b['note']}",
-        tooltip=b["name"],
-        icon=folium.Icon(color="blue", icon="info-sign")
+        location=[bm["lat"], bm["lon"]],
+        popup=f"<b>{bm['name']}</b><br>{bm['note']}",
+        tooltip=bm["name"],
+        icon=folium.Icon(color="blue", icon="map-marker")
     ).add_to(m)
 
-# 지도 렌더링
+# 지도 출력
 st_folium(m, width=700, height=500)
 
 # 리셋 버튼
