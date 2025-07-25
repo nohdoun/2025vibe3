@@ -11,7 +11,6 @@ file_gender = st.file_uploader("🔼 [필수] 연령별 인구 현황 - 남녀�
 
 if file_total and file_gender:
     try:import streamlit as st
-import pandas as pd
 import plotly.express as px
 
 # 타이틀
