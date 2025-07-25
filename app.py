@@ -58,22 +58,26 @@ map_center = [35.1667, 126.9167]
 m = folium.Map(location=map_center, zoom_start=13)
 
 # 북마크 마커 추가
-# 북마커 마커 추가 (popup 개선됨)
+# 북마크 마커 추가 (팝업에 장소 이름 포함)
 for bm in st.session_state.bookmarks:
-    # 마커에 표시될 팝업 HTML 구성
+    name = bm.get("name", "이름 없음")
+    lat = bm.get("lat")
+    lon = bm.get("lon")
+    note = bm.get("note", "설명 없음")
+
     popup_html = f"""
-    <div style="width:200px">
-        <b>📍 {bm['name']}</b><br>
-        <b>📝 설명:</b> {bm['note'] if bm['note'] else '없음'}<br>
-        <b>🌐 위도:</b> {bm['lat']}<br>
-        <b>🌐 경도:</b> {bm['lon']}
+    <div style="width: 220px;">
+        <h4 style="margin-bottom: 5px;">📍 {name}</h4>
+        <p style="margin: 0;"><b>📝 설명:</b> {note if note else '없음'}</p>
+        <p style="margin: 0;"><b>🌐 위도:</b> {lat}</p>
+        <p style="margin: 0;"><b>🌐 경도:</b> {lon}</p>
     </div>
     """
 
     folium.Marker(
-        location=[bm["lat"], bm["lon"]],
+        location=[lat, lon],
         popup=folium.Popup(popup_html, max_width=250),
-        tooltip=bm["name"],
+        tooltip=name,
         icon=folium.Icon(color="blue", icon="map-marker")
     ).add_to(m)
 
