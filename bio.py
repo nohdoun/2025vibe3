@@ -24,7 +24,7 @@ region_coords = {
 }
 
 st.set_page_config(layout="wide")
-st.title("🧬 바이오 업종별 지역 분포 시각화 (내장 데이터 기반)")
+st.title("🧬 바이오 업종별 지역 분포 시각화")
 
 # ✅ CSV 파일 직접 로드 (업로드 없이)
 csv_path = "지역_분포바이오사업장_기준_20250725131838.csv"
