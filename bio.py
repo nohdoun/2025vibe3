@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 위도/경도 정보
+# 위도/경도
 region_coords = {
     "서울": [37.5665, 126.9780],
     "부산": [35.1796, 129.0756],
@@ -23,7 +23,7 @@ region_coords = {
     "제주": [33.4996, 126.5312]
 }
 
-# 업종별 색상 고정 (기타 제외, 장비 포함)
+# 업종별 색상 고정
 color_map = {
     '바이오 의약': '#1f77b4',
     '바이오 식품': '#ff7f0e',
@@ -36,23 +36,23 @@ color_map = {
 }
 
 st.set_page_config(layout="wide")
-st.title("🧬 바이오 업종별 지역 분포 시각화 (바이오 장비 포함)")
+st.title("🧬 바이오 업종별 지역 분포 시각화")
 
-# CSV 불러오기
+# CSV 파일 직접 불러오기
 csv_path = "지역_분포바이오사업장_기준_20250725131838.csv"
 df_raw = pd.read_csv(csv_path, encoding='cp949', header=None)
 
-# 컬럼 구성
+# 컬럼 정리
 df_raw.columns = df_raw.iloc[1]
 df = df_raw.iloc[3:].reset_index(drop=True)
 df = df.rename(columns={df.columns[0]: '업종'})
 
-# 숫자형 변환
+# 숫자 변환
 region_columns = df.columns[1:]
 for col in region_columns:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# ❌ 기타 제외
+# ❌ '기타' 제외
 df = df[~df['업종'].isin(['기타'])]
 
 # 모든 조합 생성
@@ -63,7 +63,7 @@ all_combinations = pd.MultiIndex.from_product(
     names=['업종', '지역']
 ).to_frame(index=False)
 
-# Long format
+# Long 형태로
 df_long = df.melt(
     id_vars=['업종'],
     value_vars=region_columns,
@@ -71,15 +71,16 @@ df_long = df.melt(
     value_name='사업장 수'
 )
 
+# 누락 0으로 채움
 df_full = all_combinations.merge(df_long, on=['업종', '지역'], how='left')
 df_full['사업장 수'] = df_full['사업장 수'].fillna(0)
 
-# 위도/경도 추가
+# 위경도 추가
 df_full['위도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
 df_full['경도'] = df_full['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
 df_full = df_full.dropna(subset=['위도', '경도'])
 
-# ✅ 지역 선택 필터
+# 🎛 지역 선택
 available_regions = sorted(df_full['지역'].unique())
 selected_regions = st.multiselect(
     "확인할 지역을 선택하세요:",
@@ -88,7 +89,7 @@ selected_regions = st.multiselect(
 )
 filtered = df_full[df_full['지역'].isin(selected_regions)]
 
-# 🗺️ 지도 (사업장 수 0은 표시 안 함)
+# 🗺️ 지도: 0 제거
 st.subheader("🗺️ 선택 지역의 업종별 바이오 사업장 분포 (지도)")
 filtered_map = filtered[filtered['사업장 수'] > 0].copy()
 fig_map = px.scatter_mapbox(
