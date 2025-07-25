@@ -25,7 +25,7 @@ color_map = {
 }
 
 st.set_page_config(layout="wide")
-st.title("🧬 바이오 업종별 지역 분포 시각화")
+st.title("🧬 바이오 업종별 지역 분포 시각화 (0은 지도에서 제외)")
 
 # ✅ CSV 직접 로딩 (경로 고정)
 csv_path = "지역_분포바이오사업장_기준_20250725131838.csv"
