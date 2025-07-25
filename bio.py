@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 지역 위도/경도
+# 지역 위도/경도 정보
 region_coords = {
     "서울": [37.5665, 126.9780],
     "부산": [35.1796, 129.0756],
@@ -51,7 +51,7 @@ if uploaded_file is not None:
     df_long['경도'] = df_long['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
     df_long = df_long.dropna(subset=['위도', '경도'])
 
-    # ✅ 지역 선택
+    # ✅ 지역 선택 필터
     available_regions = sorted(df_long['지역'].unique())
     selected_regions = st.multiselect(
         "확인할 지역을 선택하세요:",
@@ -76,16 +76,16 @@ if uploaded_file is not None:
     )
     st.plotly_chart(fig_map, use_container_width=True)
 
-    # ✅ 막대 그래프: 업종별로 나열, 색상은 지역별
-    st.subheader("📊 업종별 바이오 사업장 수 (지역별 색상)")
+    # ✅ 막대 그래프: x축 = 지역, 색상 = 업종
+    st.subheader("📊 지역별 바이오 업종 분포 (막대그래프)")
     fig_bar = px.bar(
         filtered,
-        x='업종',
+        x='지역',
         y='사업장 수',
-        color='지역',
+        color='업종',
         text='사업장 수',
-        barmode='group',  # 업종별로 지역 비교 가능
-        title='업종별 지역별 바이오 사업장 수 비교'
+        barmode='stack',  # 'group' 으로 바꾸면 병렬 막대
+        title='지역별 업종별 바이오 사업장 수'
     )
     fig_bar.update_traces(textposition='outside')
     fig_bar.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
