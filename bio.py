@@ -23,8 +23,10 @@ region_coords = {
     "제주": [33.4996, 126.5312]
 }
 
-st.title("지역별 바이오 사업장 수 지도 시각화")
+st.set_page_config(layout="wide")
+st.title("📍 지역별 바이오 사업장 수 시각화")
 
+# 파일 업로드
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file, encoding='cp949')
@@ -40,14 +42,19 @@ if uploaded_file is not None:
     region_data['사업장 수'] = pd.to_numeric(region_data['사업장 수'], errors='coerce')
     region_data = region_data.dropna()
 
-    # 위도/경도 추가
+    # 위경도 추가
     region_data['위도'] = region_data['지역'].map(lambda x: region_coords.get(x, [None, None])[0])
     region_data['경도'] = region_data['지역'].map(lambda x: region_coords.get(x, [None, None])[1])
     region_data = region_data.dropna(subset=['위도', '경도'])
 
-    # 지도 시각화
-    fig = px.scatter_mapbox(
-        region_data,
+    # ✅ 지역 선택 필터
+    selected = st.multiselect("확인할 지역을 선택하세요:", region_data['지역'].tolist(), default=region_data['지역'].tolist())
+    filtered = region_data[region_data['지역'].isin(selected)]
+
+    # 지도 출력
+    st.subheader("🗺️ 지도 시각화")
+    fig_map = px.scatter_mapbox(
+        filtered,
         lat='위도',
         lon='경도',
         size='사업장 수',
@@ -56,7 +63,19 @@ if uploaded_file is not None:
         size_max=40,
         zoom=5.5,
         mapbox_style='carto-positron',
-        title='지도 위 지역별 바이오 사업장 수 (2023 기준)'
     )
+    st.plotly_chart(fig_map, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+    # 막대그래프 출력
+    st.subheader("📊 막대 그래프")
+    fig_bar = px.bar(
+        filtered,
+        x='지역',
+        y='사업장 수',
+        text='사업장 수',
+        title='선택한 지역의 바이오 사업장 수 (2023 기준)'
+    )
+    fig_bar.update_traces(textposition='outside')
+    fig_bar.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+
+    st.plotly_chart(fig_bar, use_container_width=True)
